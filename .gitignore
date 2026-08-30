@@ -1,0 +1,23 @@
+# Node
+node_modules/
+.next/
+out/
+
+# .NET
+bin/
+obj/
+
+# Firebase / Google Service Account Secret
+backend/firebase-service-account.json
+
+# Environment files
+.env
+.env.local
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
