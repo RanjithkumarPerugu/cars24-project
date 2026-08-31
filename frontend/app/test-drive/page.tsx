@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function TestDrivePage() {
+function TestDriveForm() {
   const searchParams = useSearchParams();
 
   const car = searchParams.get("car") || "Selected Car";
@@ -112,5 +112,19 @@ export default function TestDrivePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function TestDrivePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <TestDriveForm />
+    </Suspense>
   );
 }
