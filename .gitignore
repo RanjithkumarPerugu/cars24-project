@@ -6,6 +6,9 @@ out/
 # .NET
 bin/
 obj/
+backend/bin/
+backend/obj/
+backend/publish/
 
 # Firebase / Google Service Account Secret
 backend/firebase-service-account.json
