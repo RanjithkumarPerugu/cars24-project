@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Navbar from "../../components/Navbar";
 
 export default function NotificationsPage() {
   const [message, setMessage] = useState("");
@@ -14,333 +15,718 @@ export default function NotificationsPage() {
     mobile: false,
   });
 
-  // Show notification
-  const showNotification = (title: string, body: string) => {
+  // ==========================================
+  // LOAD SAVED PREFERENCES
+  // ==========================================
+
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem(
+      "notificationPreferences"
+    );
+
+    if (savedPreferences) {
+      try {
+        setPreferences(JSON.parse(savedPreferences));
+      } catch (error) {
+        console.error("Failed to load preferences", error);
+      }
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      setPreferences((prev) => ({
+        ...prev,
+        browser: true,
+      }));
+    }
+  }, []);
+
+  // ==========================================
+  // SHOW NOTIFICATION
+  // ==========================================
+
+  const showNotification = (
+    title: string,
+    body: string,
+    eventType: "appointment" | "bid" | "priceDrop" | "newMessage"
+  ) => {
+    if (!preferences[eventType]) {
+      setMessage(
+        `${title} notifications are currently disabled in your preferences.`
+      );
+      return;
+    }
+
     setMessage(`${title}: ${body}`);
 
     // Browser notification
     if (
       preferences.browser &&
       typeof window !== "undefined" &&
+      "Notification" in window &&
       Notification.permission === "granted"
     ) {
       new Notification(title, {
         body: body,
+        icon: "/favicon.ico",
       });
     }
   };
 
-  // Enable browser notifications
+  // ==========================================
+  // ENABLE BROWSER NOTIFICATIONS
+  // ==========================================
+
   const enableBrowserNotifications = async () => {
-    if (!("Notification" in window)) {
-      setMessage("Browser notifications are not supported.");
+    if (typeof window === "undefined") {
       return;
     }
 
-    const permission = await Notification.requestPermission();
+    if (!("Notification" in window)) {
+      setMessage(
+        "Browser notifications are not supported in this browser."
+      );
+      return;
+    }
 
-    if (permission === "granted") {
-      setPreferences((prev) => ({
-        ...prev,
-        browser: true,
-      }));
+    try {
+      const permission = await Notification.requestPermission();
 
-      setMessage("Browser notifications enabled successfully!");
-    } else {
-      setMessage("Browser notification permission was denied.");
+      if (permission === "granted") {
+        setPreferences((prev) => ({
+          ...prev,
+          browser: true,
+        }));
+
+        setMessage(
+          "Browser notifications enabled successfully!"
+        );
+
+        new Notification("Notifications Enabled", {
+          body: "You will now receive browser notifications from CarMarket.",
+          icon: "/favicon.ico",
+        });
+      } else {
+        setPreferences((prev) => ({
+          ...prev,
+          browser: false,
+        }));
+
+        setMessage(
+          "Browser notification permission was denied."
+        );
+      }
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "Unable to enable browser notifications."
+      );
     }
   };
 
-  // Firebase demo
+  // ==========================================
+  // FIREBASE DEMO
+  // ==========================================
+
   const enableFirebaseNotifications = () => {
     setMessage(
-      "Firebase Notifications button clicked! Firebase integration can be configured for production."
+      "Firebase Notifications button clicked! Firebase integration is ready to be configured for production."
     );
   };
 
-  // Save preferences
+  // ==========================================
+  // SAVE PREFERENCES
+  // ==========================================
+
   const savePreferences = () => {
-    localStorage.setItem(
-      "notificationPreferences",
-      JSON.stringify(preferences)
-    );
+    try {
+      localStorage.setItem(
+        "notificationPreferences",
+        JSON.stringify(preferences)
+      );
 
-    setMessage("Notification preferences saved successfully!");
+      setMessage(
+        "Notification preferences saved successfully!"
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "Failed to save notification preferences."
+      );
+    }
   };
+
+  // ==========================================
+  // TOGGLE PREFERENCE
+  // ==========================================
+
+  const togglePreference = (
+    key:
+      | "appointment"
+      | "bid"
+      | "priceDrop"
+      | "newMessage"
+      | "mobile",
+    value: boolean
+  ) => {
+    setPreferences((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  // ==========================================
+  // PAGE UI
+  // ==========================================
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
 
-      <h1 className="text-3xl font-bold">
-        Notification Preferences
-      </h1>
+      <main className="px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <div className="mx-auto w-full max-w-5xl">
 
-      <p className="mt-2 text-gray-600">
-        Choose which notifications you want to receive.
-      </p>
+          {/* TITLE */}
 
-      {/* MESSAGE BOX */}
+          <div className="text-center">
 
-      {message && (
-        <div className="mt-6 rounded-lg bg-blue-50 p-4 font-medium text-blue-700">
-          {message}
-        </div>
-      )}
-
-      {/* NOTIFICATION PREFERENCES */}
-
-      <div className="mt-8 rounded-xl border bg-white p-6 shadow">
-
-        <h2 className="text-xl font-bold">
-          Notification Events
-        </h2>
-
-        <div className="mt-5 space-y-5">
-
-          <label className="flex cursor-pointer items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                Appointment Confirmations
-              </p>
-
-              <p className="text-sm text-gray-600">
-                Get notified when your appointment is confirmed.
-              </p>
+            <div className="mb-3 inline-block rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+              🔔 Notification Center
             </div>
 
-            <input
-              type="checkbox"
-              checked={preferences.appointment}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  appointment: e.target.checked,
-                })
-              }
-              className="h-5 w-5"
-            />
-          </label>
+            <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Notification Preferences
+            </h1>
 
-          <label className="flex cursor-pointer items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                Bid Updates
-              </p>
-
-              <p className="text-sm text-gray-600">
-                Receive updates about your bids.
-              </p>
-            </div>
-
-            <input
-              type="checkbox"
-              checked={preferences.bid}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  bid: e.target.checked,
-                })
-              }
-              className="h-5 w-5"
-            />
-          </label>
-
-          <label className="flex cursor-pointer items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                Price Drops
-              </p>
-
-              <p className="text-sm text-gray-600">
-                Get alerts when a car price drops.
-              </p>
-            </div>
-
-            <input
-              type="checkbox"
-              checked={preferences.priceDrop}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  priceDrop: e.target.checked,
-                })
-              }
-              className="h-5 w-5"
-            />
-          </label>
-
-          <label className="flex cursor-pointer items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                New Messages
-              </p>
-
-              <p className="text-sm text-gray-600">
-                Get notified when you receive a new message.
-              </p>
-            </div>
-
-            <input
-              type="checkbox"
-              checked={preferences.newMessage}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  newMessage: e.target.checked,
-                })
-              }
-              className="h-5 w-5"
-            />
-          </label>
-
-        </div>
-      </div>
-
-      {/* NOTIFICATION CHANNELS */}
-
-      <div className="mt-8 rounded-xl border bg-white p-6 shadow">
-
-        <h2 className="text-xl font-bold">
-          Notification Channels
-        </h2>
-
-        <div className="mt-5 space-y-4">
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                Browser Notifications
-              </p>
-
-              <p className="text-sm text-gray-600">
-                Receive notifications in your web browser.
-              </p>
-            </div>
-
-            <button
-              onClick={enableBrowserNotifications}
-              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
-            >
-              🔔 Enable Browser Notifications
-            </button>
-          </div>
-
-          <button
-            onClick={enableFirebaseNotifications}
-            className="rounded-lg bg-orange-500 px-4 py-2 font-semibold text-white hover:bg-orange-600"
-          >
-            🔥 Enable Firebase Notifications
-          </button>
-
-        </div>
-      </div>
-
-      {/* TEST NOTIFICATIONS */}
-
-      <div className="mt-8 rounded-xl border bg-white p-6 shadow">
-
-        <h2 className="text-xl font-bold">
-          Test Notifications
-        </h2>
-
-        <p className="mt-2 text-gray-600">
-          Click a button to test different notification events.
-        </p>
-
-        <div className="mt-5 flex flex-wrap gap-3">
-
-          <button
-            onClick={() =>
-              showNotification(
-                "Appointment Confirmed",
-                "Your car appointment has been successfully confirmed."
-              )
-            }
-            className="rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700"
-          >
-            Test Appointment
-          </button>
-
-          <button
-            onClick={() =>
-              showNotification(
-                "Bid Update",
-                "Your latest bid has been updated."
-              )
-            }
-            className="rounded-lg bg-purple-600 px-4 py-3 font-semibold text-white hover:bg-purple-700"
-          >
-            Test Bid Update
-          </button>
-
-          <button
-            onClick={() =>
-              showNotification(
-                "Price Drop Alert",
-                "Good news! A car you are interested in has a price drop."
-              )
-            }
-            className="rounded-lg bg-red-500 px-4 py-3 font-semibold text-white hover:bg-red-600"
-          >
-            Test Price Drop
-          </button>
-
-          <button
-            onClick={() =>
-              showNotification(
-                "New Message",
-                "You have received a new message."
-              )
-            }
-            className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
-          >
-            Test New Message
-          </button>
-
-        </div>
-      </div>
-
-      {/* MOBILE NOTIFICATIONS */}
-
-      <div className="mt-8 rounded-xl border bg-white p-6 shadow">
-
-        <h2 className="text-xl font-bold">
-          Mobile Notifications
-        </h2>
-
-        <label className="mt-4 flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={preferences.mobile}
-            onChange={(e) =>
-              setPreferences({
-                ...preferences,
-                mobile: e.target.checked,
-              })
-            }
-            className="h-5 w-5"
-          />
-
-          <div>
-            <p className="font-semibold">
-              Mobile Notifications
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-gray-600 sm:text-base">
+              Choose which notifications you want to receive and control
+              how you receive important updates.
             </p>
 
-            <p className="text-sm text-gray-600">
-              Receive notifications on your mobile device.
-            </p>
           </div>
-        </label>
 
-        <button
-          onClick={savePreferences}
-          className="mt-6 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
-        >
-          Save Preferences
-        </button>
 
-      </div>
+          {/* MESSAGE BOX */}
 
+          {message && (
+            <div className="mx-auto mt-6 max-w-3xl rounded-xl border border-blue-200 bg-blue-50 p-4 text-center text-sm font-medium text-blue-700 sm:text-base">
+              {message}
+            </div>
+          )}
+
+
+          {/* NOTIFICATION EVENTS */}
+
+          <div className="mt-8 rounded-2xl bg-white p-5 shadow-lg sm:p-6 md:p-8">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl">
+                ⚙️
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Notification Events
+                </h2>
+
+                <p className="text-sm text-gray-500">
+                  Select the events you want to receive alerts for.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div className="mt-6 space-y-4">
+
+              {/* APPOINTMENT */}
+
+              <label className="flex cursor-pointer flex-col gap-4 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="text-2xl">
+                    📅
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      Appointment Confirmations
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Get notified when your appointment is confirmed.
+                    </p>
+                  </div>
+
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={preferences.appointment}
+                  onChange={(e) =>
+                    togglePreference(
+                      "appointment",
+                      e.target.checked
+                    )
+                  }
+                  className="h-5 w-5 cursor-pointer accent-blue-600"
+                />
+
+              </label>
+
+
+              {/* BID */}
+
+              <label className="flex cursor-pointer flex-col gap-4 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="text-2xl">
+                    💰
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      Bid Updates
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Receive updates about your bids.
+                    </p>
+                  </div>
+
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={preferences.bid}
+                  onChange={(e) =>
+                    togglePreference(
+                      "bid",
+                      e.target.checked
+                    )
+                  }
+                  className="h-5 w-5 cursor-pointer accent-purple-600"
+                />
+
+              </label>
+
+
+              {/* PRICE DROP */}
+
+              <label className="flex cursor-pointer flex-col gap-4 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="text-2xl">
+                    📉
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      Price Drops
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Get alerts when a car price drops.
+                    </p>
+                  </div>
+
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={preferences.priceDrop}
+                  onChange={(e) =>
+                    togglePreference(
+                      "priceDrop",
+                      e.target.checked
+                    )
+                  }
+                  className="h-5 w-5 cursor-pointer accent-red-500"
+                />
+
+              </label>
+
+
+              {/* NEW MESSAGE */}
+
+              <label className="flex cursor-pointer flex-col gap-4 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="text-2xl">
+                    💬
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      New Messages
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Get notified when you receive a new message.
+                    </p>
+                  </div>
+
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={preferences.newMessage}
+                  onChange={(e) =>
+                    togglePreference(
+                      "newMessage",
+                      e.target.checked
+                    )
+                  }
+                  className="h-5 w-5 cursor-pointer accent-green-600"
+                />
+
+              </label>
+
+            </div>
+
+          </div>
+
+
+          {/* NOTIFICATION CHANNELS */}
+
+          <div className="mt-6 rounded-2xl bg-white p-5 shadow-lg sm:p-6 md:p-8">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-2xl">
+                📡
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Notification Channels
+                </h2>
+
+                <p className="text-sm text-gray-500">
+                  Choose how you want to receive notifications.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+
+              {/* BROWSER */}
+
+              <div className="rounded-xl border border-gray-200 p-5">
+
+                <div className="text-3xl">
+                  🌐
+                </div>
+
+                <h3 className="mt-3 font-bold">
+                  Browser Notifications
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-600">
+                  Receive instant notifications directly in your web browser.
+                </p>
+
+                <div className="mt-4">
+
+                  {preferences.browser ? (
+
+                    <div className="rounded-lg bg-green-50 p-3 text-center font-semibold text-green-700">
+                      ✓ Browser Notifications Enabled
+                    </div>
+
+                  ) : (
+
+                    <button
+                      onClick={enableBrowserNotifications}
+                      className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      🔔 Enable Browser Notifications
+                    </button>
+
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* FIREBASE */}
+
+              <div className="rounded-xl border border-gray-200 p-5">
+
+                <div className="text-3xl">
+                  🔥
+                </div>
+
+                <h3 className="mt-3 font-bold">
+                  Firebase Notifications
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-600">
+                  Enable Firebase Cloud Messaging for advanced push
+                  notification support.
+                </p>
+
+                <button
+                  onClick={enableFirebaseNotifications}
+                  className="mt-4 w-full rounded-xl bg-orange-500 px-4 py-3 font-semibold text-white transition hover:bg-orange-600"
+                >
+                  🔥 Enable Firebase Notifications
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* TEST NOTIFICATIONS */}
+
+          <div className="mt-6 rounded-2xl bg-white p-5 shadow-lg sm:p-6 md:p-8">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-2xl">
+                🧪
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Test Notifications
+                </h2>
+
+                <p className="text-sm text-gray-500">
+                  Test different notification events.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+              {/* APPOINTMENT TEST */}
+
+              <button
+                onClick={() =>
+                  showNotification(
+                    "Appointment Confirmed",
+                    "Your car appointment has been successfully confirmed.",
+                    "appointment"
+                  )
+                }
+                className="rounded-xl bg-green-600 px-4 py-4 font-semibold text-white transition hover:bg-green-700"
+              >
+                📅
+                <br />
+                Test Appointment
+              </button>
+
+
+              {/* BID TEST */}
+
+              <button
+                onClick={() =>
+                  showNotification(
+                    "Bid Update",
+                    "Your latest bid has been updated.",
+                    "bid"
+                  )
+                }
+                className="rounded-xl bg-purple-600 px-4 py-4 font-semibold text-white transition hover:bg-purple-700"
+              >
+                💰
+                <br />
+                Test Bid Update
+              </button>
+
+
+              {/* PRICE DROP TEST */}
+
+              <button
+                onClick={() =>
+                  showNotification(
+                    "Price Drop Alert",
+                    "Good news! A car you are interested in has a price drop.",
+                    "priceDrop"
+                  )
+                }
+                className="rounded-xl bg-red-500 px-4 py-4 font-semibold text-white transition hover:bg-red-600"
+              >
+                📉
+                <br />
+                Test Price Drop
+              </button>
+
+
+              {/* MESSAGE TEST */}
+
+              <button
+                onClick={() =>
+                  showNotification(
+                    "New Message",
+                    "You have received a new message.",
+                    "newMessage"
+                  )
+                }
+                className="rounded-xl bg-blue-600 px-4 py-4 font-semibold text-white transition hover:bg-blue-700"
+              >
+                💬
+                <br />
+                Test New Message
+              </button>
+
+            </div>
+
+          </div>
+
+
+          {/* MOBILE NOTIFICATIONS */}
+
+          <div className="mt-6 rounded-2xl bg-white p-5 shadow-lg sm:p-6 md:p-8">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl">
+                📱
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Mobile Notifications
+                </h2>
+
+                <p className="text-sm text-gray-500">
+                  Control notification preferences for mobile devices.
+                </p>
+              </div>
+
+            </div>
+
+
+            <label className="mt-6 flex cursor-pointer flex-col gap-4 rounded-xl bg-gray-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+
+              <div>
+
+                <p className="font-semibold text-gray-900">
+                  Enable Mobile Notifications
+                </p>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  Receive important updates on your mobile device.
+                </p>
+
+              </div>
+
+              <input
+                type="checkbox"
+                checked={preferences.mobile}
+                onChange={(e) =>
+                  togglePreference(
+                    "mobile",
+                    e.target.checked
+                  )
+                }
+                className="h-5 w-5 cursor-pointer accent-green-600"
+              />
+
+            </label>
+
+
+            {/* SAVE BUTTON */}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+
+              <button
+                onClick={savePreferences}
+                className="flex-1 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
+              >
+                ✓ Save Preferences
+              </button>
+
+              <button
+                onClick={() => setMessage("")}
+                className="rounded-xl border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-100"
+              >
+                Clear Message
+              </button>
+
+            </div>
+
+          </div>
+
+
+          {/* INFO SECTION */}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+
+            <div className="rounded-xl bg-white p-5 text-center shadow">
+
+              <div className="text-3xl">
+                🔔
+              </div>
+
+              <h3 className="mt-3 font-bold">
+                Stay Updated
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Never miss important car marketplace updates.
+              </p>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white p-5 text-center shadow">
+
+              <div className="text-3xl">
+                ⚙️
+              </div>
+
+              <h3 className="mt-3 font-bold">
+                Full Control
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Choose exactly which notifications you want.
+              </p>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white p-5 text-center shadow">
+
+              <div className="text-3xl">
+                📱
+              </div>
+
+              <h3 className="mt-3 font-bold">
+                Multi Device
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Receive alerts across browsers and mobile devices.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+      </main>
     </div>
   );
 }

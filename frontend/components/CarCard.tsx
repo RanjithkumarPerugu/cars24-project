@@ -31,19 +31,35 @@ export default function CarCard({
   const [recommendedPrice, setRecommendedPrice] =
     useState<number | null>(null);
 
-  // NEW: Pricing reasons
   const [pricingReasons, setPricingReasons] =
     useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
 
   // ==========================================
-  // CONVERT PRICE STRING TO NUMBER
+  // CONVERT PRICE TO NUMBER
+  // Example:
+  // ₹12 Lakh → 1200000
+  // ₹7 Lakh → 700000
   // ==========================================
 
-  const basePrice = Number(
-    price.replace(/[^\d]/g, "")
-  );
+  const convertPriceToNumber = (priceValue: string) => {
+    const numericValue = Number(
+      priceValue.replace(/[^\d.]/g, "")
+    );
+
+    if (priceValue.toLowerCase().includes("lakh")) {
+      return numericValue * 100000;
+    }
+
+    if (priceValue.toLowerCase().includes("crore")) {
+      return numericValue * 10000000;
+    }
+
+    return numericValue;
+  };
+
+  const basePrice = convertPriceToNumber(price);
 
   // ==========================================
   // VEHICLE TYPE DETECTION
@@ -57,7 +73,8 @@ export default function CarCard({
       carName.includes("nexon") ||
       carName.includes("venue") ||
       carName.includes("seltos") ||
-      carName.includes("scorpio")
+      carName.includes("scorpio") ||
+      carName.includes("xuv")
     ) {
       return "SUV";
     }
@@ -81,7 +98,7 @@ export default function CarCard({
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocationStatus(
-        "Location detection not supported"
+        "Location detection is not supported"
       );
       return;
     }
@@ -96,7 +113,7 @@ export default function CarCard({
           longitude
         );
 
-        setLocationStatus("Location detected");
+        setLocationStatus("Location detected successfully");
 
         // Prototype region classification
         if (latitude > 20) {
@@ -107,7 +124,10 @@ export default function CarCard({
           setRegion("Normal");
         }
       },
-      () => {
+
+      (error) => {
+        console.error("Location error:", error);
+
         setLocationStatus(
           "Location permission denied - select region manually"
         );
@@ -142,39 +162,52 @@ export default function CarCard({
 
       const data = await response.json();
 
+      console.log("Pricing API Response:", data);
+
       if (response.ok) {
-        // Recommended Price
         setRecommendedPrice(
           data.recommendedPrice
         );
 
-        // NEW: Pricing Reasons
         setPricingReasons(
           data.reasons || []
         );
       } else {
-        console.error(data);
+        console.error(
+          "Pricing calculation failed:",
+          data
+        );
+
+        setRecommendedPrice(null);
+        setPricingReasons([]);
       }
     } catch (error) {
       console.error(
         "Pricing API error:",
         error
       );
+
+      setRecommendedPrice(null);
+      setPricingReasons([]);
     } finally {
       setLoading(false);
     }
   };
 
   // ==========================================
-  // RECALCULATE WHEN REGION CHANGES
+  // RECALCULATE PRICE WHEN REGION CHANGES
   // ==========================================
 
   useEffect(() => {
     getRecommendedPrice();
   }, [region]);
 
+  // ==========================================
+  // PAGE UI
+  // ==========================================
+
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-md">
+    <div className="overflow-hidden rounded-xl bg-white shadow-md transition hover:shadow-xl">
 
       {/* CAR IMAGE */}
 
@@ -183,6 +216,7 @@ export default function CarCard({
           src={image}
           alt={`${brand} ${model}`}
           fill
+          sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
       </div>
@@ -215,7 +249,7 @@ export default function CarCard({
 
         {/* REGION SELECTION */}
 
-        <div className="mt-3">
+        <div className="mt-4">
 
           <label className="text-sm font-semibold">
             Select Region
@@ -226,7 +260,7 @@ export default function CarCard({
             onChange={(e) =>
               setRegion(e.target.value)
             }
-            className="mt-1 w-full rounded-lg border p-2"
+            className="mt-2 w-full rounded-lg border border-gray-300 p-2"
           >
             <option value="Normal">
               Normal
@@ -251,22 +285,23 @@ export default function CarCard({
 
         {/* RECOMMENDED PRICE */}
 
-        <div className="mt-4 rounded-lg bg-blue-50 p-3">
+        <div className="mt-4 rounded-lg bg-blue-50 p-4">
 
           <p className="text-sm font-semibold text-blue-700">
             Recommended Price
           </p>
 
           {loading ? (
-            <p className="mt-1">
+            <p className="mt-2 text-gray-600">
               Calculating...
             </p>
+          ) : recommendedPrice !== null ? (
+            <p className="mt-2 text-xl font-bold text-blue-700">
+              ₹{recommendedPrice.toLocaleString("en-IN")}
+            </p>
           ) : (
-            <p className="mt-1 text-xl font-bold text-blue-700">
-              ₹
-              {recommendedPrice !== null
-                ? recommendedPrice.toLocaleString("en-IN")
-                : "Not available"}
+            <p className="mt-2 text-sm text-red-500">
+              Price not available. Please check backend.
             </p>
           )}
 
@@ -281,12 +316,16 @@ export default function CarCard({
               Why this price?
             </p>
 
-            <ul className="mt-2 list-disc pl-5 text-sm text-gray-600">
-              {pricingReasons.map((reason, index) => (
-                <li key={index}>
-                  {reason}
-                </li>
-              ))}
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+
+              {pricingReasons.map(
+                (reason, index) => (
+                  <li key={index}>
+                    {reason}
+                  </li>
+                )
+              )}
+
             </ul>
 
           </div>
@@ -298,7 +337,7 @@ export default function CarCard({
           onClick={() =>
             router.push(`/cars/${id}`)
           }
-          className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white"
+          className="mt-5 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
         >
           View Details
         </button>
