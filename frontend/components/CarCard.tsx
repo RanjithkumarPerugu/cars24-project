@@ -34,15 +34,6 @@ export default function CarCard({
   const [pricingReasons, setPricingReasons] =
     useState<string[]>([]);
 
-  const [loading, setLoading] = useState(false);
-
-  // ==========================================
-  // CONVERT PRICE TO NUMBER
-  // Example:
-  // ₹12 Lakh → 1200000
-  // ₹7 Lakh → 700000
-  // ==========================================
-
   const convertPriceToNumber = (priceValue: string) => {
     const numericValue = Number(
       priceValue.replace(/[^\d.]/g, "")
@@ -60,10 +51,6 @@ export default function CarCard({
   };
 
   const basePrice = convertPriceToNumber(price);
-
-  // ==========================================
-  // VEHICLE TYPE DETECTION
-  // ==========================================
 
   const getVehicleType = () => {
     const carName = `${brand} ${model}`.toLowerCase();
@@ -91,9 +78,7 @@ export default function CarCard({
 
   const vehicleType = getVehicleType();
 
-  // ==========================================
   // AUTOMATIC LOCATION DETECTION
-  // ==========================================
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -105,29 +90,24 @@ export default function CarCard({
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude } = position.coords;
 
-        console.log(
-          "User location:",
-          latitude,
-          longitude
-        );
+        let detectedRegion = "Normal";
 
-        setLocationStatus("Location detected successfully");
-
-        // Prototype region classification
         if (latitude > 20) {
-          setRegion("Metro");
+          detectedRegion = "Metro";
         } else if (latitude > 15) {
-          setRegion("Hilly");
-        } else {
-          setRegion("Normal");
+          detectedRegion = "Hilly";
         }
+
+        setRegion(detectedRegion);
+
+        setLocationStatus(
+          `Location detected successfully - ${detectedRegion} region`
+        );
       },
 
-      (error) => {
-        console.error("Location error:", error);
-
+      () => {
         setLocationStatus(
           "Location permission denied - select region manually"
         );
@@ -135,76 +115,57 @@ export default function CarCard({
     );
   }, []);
 
-  // ==========================================
-  // GET RECOMMENDED PRICE FROM BACKEND
-  // ==========================================
-
-  const getRecommendedPrice = async () => {
-    try {
-      setLoading(true);
-
-      const response = await fetch(
-        "http://localhost:5133/api/pricing/calculate",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            basePrice: basePrice,
-            vehicleType: vehicleType,
-            region: region,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      console.log("Pricing API Response:", data);
-
-      if (response.ok) {
-        setRecommendedPrice(
-          data.recommendedPrice
-        );
-
-        setPricingReasons(
-          data.reasons || []
-        );
-      } else {
-        console.error(
-          "Pricing calculation failed:",
-          data
-        );
-
-        setRecommendedPrice(null);
-        setPricingReasons([]);
-      }
-    } catch (error) {
-      console.error(
-        "Pricing API error:",
-        error
-      );
-
-      setRecommendedPrice(null);
-      setPricingReasons([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==========================================
-  // RECALCULATE PRICE WHEN REGION CHANGES
-  // ==========================================
+  // CALCULATE RECOMMENDED PRICE
 
   useEffect(() => {
-    getRecommendedPrice();
-  }, [region]);
+    let multiplier = 1;
+    let reasons: string[] = [];
 
-  // ==========================================
-  // PAGE UI
-  // ==========================================
+    if (region === "Metro") {
+      multiplier = 1.08;
+
+      reasons = [
+        "Higher demand in metropolitan areas",
+        "Better resale value",
+        "Higher operating and service costs",
+      ];
+    } else if (region === "Hilly") {
+      multiplier = 1.05;
+
+      reasons = [
+        "Suitable pricing for difficult terrain",
+        "Higher demand for durable vehicles",
+        "Additional transportation costs",
+      ];
+    } else {
+      multiplier = 1.03;
+
+      reasons = [
+        "Standard market demand",
+        "Normal transportation costs",
+        "Balanced regional pricing",
+      ];
+    }
+
+    if (vehicleType === "SUV") {
+      multiplier += 0.02;
+
+      reasons.push("SUV market demand adjustment");
+    }
+
+    if (vehicleType === "Offroad") {
+      multiplier += 0.03;
+
+      reasons.push("Off-road vehicle demand adjustment");
+    }
+
+    const calculatedPrice = Math.round(
+      basePrice * multiplier
+    );
+
+    setRecommendedPrice(calculatedPrice);
+    setPricingReasons(reasons);
+  }, [region, basePrice, vehicleType]);
 
   return (
     <div className="overflow-hidden rounded-xl bg-white shadow-md transition hover:shadow-xl">
@@ -275,8 +236,6 @@ export default function CarCard({
             </option>
           </select>
 
-          {/* LOCATION STATUS */}
-
           <p className="mt-2 text-xs text-gray-500">
             📍 {locationStatus}
           </p>
@@ -291,17 +250,13 @@ export default function CarCard({
             Recommended Price
           </p>
 
-          {loading ? (
-            <p className="mt-2 text-gray-600">
-              Calculating...
-            </p>
-          ) : recommendedPrice !== null ? (
+          {recommendedPrice !== null ? (
             <p className="mt-2 text-xl font-bold text-blue-700">
               ₹{recommendedPrice.toLocaleString("en-IN")}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-red-500">
-              Price not available. Please check backend.
+            <p className="mt-2 text-sm text-gray-600">
+              Calculating price...
             </p>
           )}
 
