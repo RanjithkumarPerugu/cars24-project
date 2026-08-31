@@ -25,14 +25,21 @@ export default function CarCard({
 
   const [region, setRegion] = useState("Normal");
 
-  const [locationStatus, setLocationStatus] =
-    useState("Detecting location...");
+  const [locationStatus, setLocationStatus] = useState(
+    "Detecting location..."
+  );
 
   const [recommendedPrice, setRecommendedPrice] =
     useState<number | null>(null);
 
-  const [pricingReasons, setPricingReasons] =
-    useState<string[]>([]);
+  const [pricingReasons, setPricingReasons] = useState<string[]>([]);
+
+  // ==========================================
+  // CONVERT PRICE TO NUMBER
+  // Example:
+  // ₹12 Lakh → 1200000
+  // ₹7 Lakh → 700000
+  // ==========================================
 
   const convertPriceToNumber = (priceValue: string) => {
     const numericValue = Number(
@@ -51,6 +58,10 @@ export default function CarCard({
   };
 
   const basePrice = convertPriceToNumber(price);
+
+  // ==========================================
+  // VEHICLE TYPE DETECTION
+  // ==========================================
 
   const getVehicleType = () => {
     const carName = `${brand} ${model}`.toLowerCase();
@@ -78,12 +89,14 @@ export default function CarCard({
 
   const vehicleType = getVehicleType();
 
+  // ==========================================
   // AUTOMATIC LOCATION DETECTION
+  // ==========================================
 
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocationStatus(
-        "Location detection is not supported"
+        "Location detection is not supported by your browser"
       );
       return;
     }
@@ -94,6 +107,7 @@ export default function CarCard({
 
         let detectedRegion = "Normal";
 
+        // Demo region classification
         if (latitude > 20) {
           detectedRegion = "Metro";
         } else if (latitude > 15) {
@@ -115,12 +129,15 @@ export default function CarCard({
     );
   }, []);
 
+  // ==========================================
   // CALCULATE RECOMMENDED PRICE
+  // ==========================================
 
   useEffect(() => {
     let multiplier = 1;
     let reasons: string[] = [];
 
+    // Region-based pricing
     if (region === "Metro") {
       multiplier = 1.08;
 
@@ -147,16 +164,21 @@ export default function CarCard({
       ];
     }
 
+    // Vehicle type adjustment
     if (vehicleType === "SUV") {
       multiplier += 0.02;
 
-      reasons.push("SUV market demand adjustment");
+      reasons.push(
+        "SUV market demand adjustment"
+      );
     }
 
     if (vehicleType === "Offroad") {
       multiplier += 0.03;
 
-      reasons.push("Off-road vehicle demand adjustment");
+      reasons.push(
+        "Off-road vehicle demand adjustment"
+      );
     }
 
     const calculatedPrice = Math.round(
@@ -164,12 +186,17 @@ export default function CarCard({
     );
 
     setRecommendedPrice(calculatedPrice);
+
     setPricingReasons(reasons);
   }, [region, basePrice, vehicleType]);
 
+  // ==========================================
+  // PAGE UI
+  // ==========================================
+
   return (
     <div className="overflow-hidden rounded-xl bg-white shadow-md transition hover:shadow-xl">
-
+      
       {/* CAR IMAGE */}
 
       <div className="relative h-48 w-full">
@@ -235,6 +262,8 @@ export default function CarCard({
               Hilly
             </option>
           </select>
+
+          {/* LOCATION STATUS */}
 
           <p className="mt-2 text-xs text-gray-500">
             📍 {locationStatus}
