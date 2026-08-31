@@ -15,12 +15,9 @@ export default function GeoLocationSection() {
   );
 
   const [detectedCity, setDetectedCity] = useState("");
-
   const [selectedCity, setSelectedCity] = useState("");
-
   const [cars, setCars] = useState<Car[]>([]);
 
-  // Sample cars
   const allCars: Car[] = [
     {
       id: 1,
@@ -52,9 +49,14 @@ export default function GeoLocationSection() {
       model: "Thar",
       city: "Hyderabad",
     },
+    {
+      id: 6,
+      brand: "Kia",
+      model: "Seltos",
+      city: "Bangalore",
+    },
   ];
 
-  // Fetch cars by city
   const fetchCarsByCity = (city: string) => {
     const filteredCars = allCars.filter(
       (car) => car.city.toLowerCase() === city.toLowerCase()
@@ -63,10 +65,11 @@ export default function GeoLocationSection() {
     setCars(filteredCars);
   };
 
-  // Detect user location
   const detectLocation = () => {
     if (!navigator.geolocation) {
-      setLocationStatus("Geolocation is not supported by your browser.");
+      setLocationStatus(
+        "Geolocation is not supported by your browser."
+      );
       return;
     }
 
@@ -80,39 +83,68 @@ export default function GeoLocationSection() {
         console.log("Latitude:", latitude);
         console.log("Longitude:", longitude);
 
-        // Demo city detection
-        let city = "Chennai";
+        let city = "";
 
-        // Example simple location mapping
-        if (latitude > 17 && latitude < 18) {
+        // Hyderabad
+        if (
+          latitude >= 17.2 &&
+          latitude <= 17.6 &&
+          longitude >= 78.2 &&
+          longitude <= 78.7
+        ) {
           city = "Hyderabad";
-        } else if (latitude > 12 && latitude < 14) {
-          city = "Chennai";
-        } else if (latitude > 12 && latitude < 14 && longitude > 77) {
+        }
+
+        // Bangalore
+        else if (
+          latitude >= 12.7 &&
+          latitude <= 13.2 &&
+          longitude >= 77.3 &&
+          longitude <= 77.8
+        ) {
           city = "Bangalore";
         }
 
-        setDetectedCity(city);
-        setSelectedCity(city);
+        // Chennai
+        else if (
+          latitude >= 12.8 &&
+          latitude <= 13.3 &&
+          longitude >= 80.0 &&
+          longitude <= 80.5
+        ) {
+          city = "Chennai";
+        }
 
-        setLocationStatus(`Location detected: ${city}`);
+        if (city) {
+          setDetectedCity(city);
+          setSelectedCity(city);
+          setLocationStatus(`Location detected successfully: ${city}`);
+          fetchCarsByCity(city);
+        } else {
+          setDetectedCity("");
+          setSelectedCity("");
+          setCars([]);
 
-        fetchCarsByCity(city);
+          setLocationStatus(
+            "Your location was detected, but cars are currently available only in Chennai, Hyderabad, and Bangalore. Please select a city manually."
+          );
+        }
       },
+
       (error) => {
         console.error(error);
 
         if (error.code === 1) {
           setLocationStatus(
-            "Location permission denied. Please select a city manually."
+            "Location permission denied. Please allow location access or select a city manually."
           );
         } else if (error.code === 2) {
           setLocationStatus(
-            "Location information is unavailable."
+            "Location information is unavailable. Please select a city manually."
           );
         } else if (error.code === 3) {
           setLocationStatus(
-            "Location request timed out."
+            "Location request timed out. Please try again."
           );
         } else {
           setLocationStatus(
@@ -123,7 +155,6 @@ export default function GeoLocationSection() {
     );
   };
 
-  // Manual city selection
   const handleCityChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
@@ -147,14 +178,12 @@ export default function GeoLocationSection() {
       <div className="rounded-xl bg-white p-6 shadow-md">
 
         <h2 className="text-2xl font-bold text-gray-800">
-          Find Cars Near You
+          Cars Near You
         </h2>
 
         <p className="mt-2 text-gray-600">
           Detect your location or select your city to find available cars.
         </p>
-
-        {/* Location Button */}
 
         <button
           onClick={detectLocation}
@@ -163,25 +192,21 @@ export default function GeoLocationSection() {
           📍 Detect My Location
         </button>
 
-        {/* Location Status */}
-
         <div className="mt-4 rounded-lg bg-gray-100 p-3">
           <p className="text-sm font-medium text-gray-700">
             {locationStatus}
           </p>
 
           {detectedCity && (
-            <p className="mt-1 text-sm text-green-600">
+            <p className="mt-1 text-sm font-semibold text-green-600">
               Detected City: {detectedCity}
             </p>
           )}
         </div>
 
-        {/* City Selection */}
-
         <div className="mt-6">
           <label className="mb-2 block font-semibold text-gray-700">
-            Select City
+            Or Select City Manually
           </label>
 
           <select
@@ -207,8 +232,6 @@ export default function GeoLocationSection() {
           </select>
         </div>
 
-        {/* Cars */}
-
         {selectedCity && (
           <div className="mt-8">
 
@@ -222,15 +245,19 @@ export default function GeoLocationSection() {
                 {cars.map((car) => (
                   <div
                     key={car.id}
-                    className="rounded-lg border p-4 shadow-sm"
+                    className="rounded-lg border bg-gray-50 p-4 shadow-sm"
                   >
-                    <h4 className="text-lg font-bold">
+                    <h4 className="text-lg font-bold text-gray-800">
                       {car.brand} {car.model}
                     </h4>
 
                     <p className="mt-2 text-sm text-gray-600">
                       📍 {car.city}
                     </p>
+
+                    <button className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
+                      View Details
+                    </button>
                   </div>
                 ))}
 
